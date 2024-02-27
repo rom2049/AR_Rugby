@@ -1,125 +1,142 @@
 "use strict";
 
-// Import only what you need, to help your bundler optimize final code size using tree shaking
-// see https://developer.mozilla.org/en-US/docs/Glossary/Tree_shaking)
+import * as THREE from 'three';
+import * as CANNON from 'cannon-es';
+import { ARButton } from 'three/addons/webxr/ARButton.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import CannonDebugger from 'cannon-es-debugger';
 
-import {
-  PerspectiveCamera,
-  Scene,
-  WebGLRenderer,
-  BoxGeometry,
-  Mesh,
-  MeshNormalMaterial,
-  AmbientLight,
-  Clock
-} from 'three';
+let container, camera, scene, renderer, controller, reticle, hitTestSource = null, hitTestSourceRequested = false;
+let stats, movementPlane, clickMarker, raycaster, cubeMesh, sphereMesh;
+let world, jointBody, jointConstraint, cubeBody, sphereBody, groundBody;
+let cannonDebugger;
+const meshes = [], bodies = [];
+let pose_count = 0;
 
-// If you prefer to import the whole library, with the THREE prefix, use the following line instead:
-// import * as THREE from 'three'
+init();
+initCannon();
+animate();
 
-// NOTE: three/addons alias is supported by Rollup: you can use it interchangeably with three/examples/jsm/  
+function init() {
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+    const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 3);
+    light.position.set(0.5, 1, 0.25);
+    scene.add(light);
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.xr.enabled = true;
+    container.appendChild(renderer.domElement);
+    document.body.appendChild(ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
 
-// Importing Ammo can be tricky.
-// Vite supports webassembly: https://vitejs.dev/guide/features.html#webassembly
-// so in theory this should work:
-//
-// import ammoinit from 'three/addons/libs/ammo.wasm.js?init';
-// ammoinit().then((AmmoLib) => {
-//  Ammo = AmmoLib.exports.Ammo()
-// })
-//
-// But the Ammo lib bundled with the THREE js examples does not seem to export modules properly.
-// A solution is to treat this library as a standalone file and copy it using 'vite-plugin-static-copy'.
-// See vite.config.js
-// 
-// Consider using alternatives like Oimo or cannon-es
-import {
-  OrbitControls
-} from 'three/addons/controls/OrbitControls.js';
+    function onSelect() {
+        if (reticle.visible) {
+            if (pose_count == 0) {
+                function loadData() {
+                    new GLTFLoader()
+                        .setPath('assets/models/')
+                        .load('cage.glb', gltfReader);
+                }
+                function gltfReader(gltf) {
+                    let testModel = null;
+                    testModel = gltf.scene;
+                    if (testModel != null) {
+                        console.log("Model loaded:  " + testModel);
+                        reticle.matrix.decompose(gltf.scene.position, gltf.scene.quaternion, gltf.scene.scale);
+                        gltf.scene.translateX(-0.55);
+                        scene.add(gltf.scene);
+                    } else {
+                        console.log("Load FAILED.  ");
+                    }
+                }
+                loadData();
+                pose_count += 1;
+            } else if (pose_count == 1) {
+                const sphereGeometry = new THREE.SphereGeometry(0.3, 20, 20, 10, 10);
+                const sphereMaterial = new THREE.MeshPhongMaterial({ color: 0xa1260c });
+                sphereMesh = new THREE.Mesh(sphereGeometry, sphereMaterial);
+                reticle.matrix.decompose(sphereMesh.position, sphereMesh.quaternion, sphereMesh.scale);
+                meshes.push(sphereMesh);
+                scene.add(sphereMesh);
+                pose_count += 1;
+            } else {
+                console.log("oui");
+                sphereBody.velocity.y = 15;
+                sphereBody.velocity.x = 15;
+            }
+        }
+    }
+    controller = renderer.xr.getController(0);
+    controller.addEventListener('select', onSelect);
+    scene.add(controller);
+    reticle = new THREE.Mesh(new THREE.RingGeometry(0.15, 0.2, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial());
+    reticle.matrixAutoUpdate = false;
+    reticle.visible = false;
+    scene.add(reticle);
 
-import {
-  GLTFLoader
-} from 'three/addons/loaders/GLTFLoader.js';
-
-// Example of hard link to official repo for data, if needed
-// const MODEL_PATH = 'https://raw.githubusercontent.com/mrdoob/js/r148/examples/models/gltf/LeePerrySmith/LeePerrySmith.glb';
-
-
-// INSERT CODE HERE
-
-const scene = new Scene();
-const aspect = window.innerWidth / window.innerHeight;
-const camera = new PerspectiveCamera(75, aspect, 0.1, 1000);
-
-const light = new AmbientLight(0xffffff, 1.0); // soft white light
-scene.add(light);
-
-const renderer = new WebGLRenderer();
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
-
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.listenToKeyEvents(window); // optional
-
-const geometry = new BoxGeometry(1, 1, 1);
-const material = new MeshNormalMaterial();
-const cube = new Mesh(geometry, material);
-
-scene.add(cube);
-
-function loadData() {
-  new GLTFLoader()
-    .setPath('assets/models/')
-    .load('test.glb', gltfReader);
+    window.addEventListener('resize', onWindowResize);
 }
 
+function initCannon() {
+    world = new CANNON.World();
+    world.gravity.set(0, -10, 0);
 
-function gltfReader(gltf) {
-  let testModel = null;
+    cannonDebugger = new CannonDebugger(scene, world);
 
-  testModel = gltf.scene;
+    // Créer un sol
+    const groundShape = new CANNON.Plane();
+    groundBody = new CANNON.Body({ mass: 0 });
+    groundBody.addShape(groundShape);
+    world.addBody(groundBody);
 
-  if (testModel != null) {
-    console.log("Model loaded:  " + testModel);
-    scene.add(gltf.scene);
-  } else {
-    console.log("Load FAILED.  ");
-  }
+    // Créer un corps pour la sphère
+    const sphereShape = new CANNON.Sphere(0.5);
+    sphereBody = new CANNON.Body({ mass: 5 });
+    sphereBody.addShape(sphereShape);
+    world.addBody(sphereBody);
 }
-
-loadData();
-
-
-camera.position.z = 3;
-
-
-const clock = new Clock();
-
-// Main loop
-const animation = () => {
-
-  renderer.setAnimationLoop(animation); // requestAnimationFrame() replacement, compatible with XR 
-
-  const delta = clock.getDelta();
-  const elapsed = clock.getElapsedTime();
-
-  // can be used in shaders: uniforms.u_time.value = elapsed;
-
-  cube.rotation.x = elapsed / 2;
-  cube.rotation.y = elapsed / 1;
-
-  renderer.render(scene, camera);
-};
-
-animation();
-
-window.addEventListener('resize', onWindowResize, false);
 
 function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
 
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
+function animate() {
+    renderer.setAnimationLoop(render);
+}
 
-  renderer.setSize(window.innerWidth, window.innerHeight);
-
+function render(timestamp, frame) {
+    if (frame) {
+        const referenceSpace = renderer.xr.getReferenceSpace();
+        const session = renderer.xr.getSession();
+        if (hitTestSourceRequested === false) {
+            session.requestReferenceSpace('viewer').then(function (referenceSpace) {
+                session.requestHitTestSource({ space: referenceSpace }).then(function (source) {
+                    hitTestSource = source;
+                });
+            });
+            session.addEventListener('end', function () {
+                hitTestSourceRequested = false;
+                hitTestSource = null;
+            });
+            hitTestSourceRequested = true;
+        }
+        if (hitTestSource) {
+            const hitTestResults = frame.getHitTestResults(hitTestSource);
+            if (hitTestResults.length) {
+                const hit = hitTestResults[0];
+                reticle.visible = true;
+                reticle.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);
+            } else {
+                reticle.visible = false;
+            }
+        }
+    }
+    cannonDebugger.update();
+    renderer.render(scene, camera);
 }

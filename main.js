@@ -12,8 +12,9 @@ let container, camera, scene, renderer, controller, reticle, hitTestSource = nul
 let stats, movementPlane, clickMarker, raycaster, cubeMesh, sphereMesh;
 let world, jointBody, jointConstraint, cubeBody, sphereBody, groundBody;
 let cannonDebugger;
-const meshes = [], bodies = [];
+const meshes = [], bodies = [], shapes = [];
 let pose_count = 0;
+
 
 init();
 initCannon();
@@ -43,83 +44,111 @@ function init() {
 
         if (reticle.visible) {
             if (pose_count == 0) {
-                function loadData() {
-                    new GLTFLoader()
-                        .setPath('assets/models/')
-                        .load('cage.glb', gltfReader);
-                }
-                function gltfReader(gltf) {
-                    let testModel = null;
-                    testModel = gltf.scene;
-                    if (testModel != null) {
-                        console.log("Model loaded:  " + testModel);
-                        // reticle.matrix.decompose(gltf.scene.position, gltf.scene.quaternion, gltf.scene.scale);
-                        // gltf.scene.translateX(-0.55);
+                // function loadData() {
+                //     new GLTFLoader()
+                //         .setPath('assets/models/')
+                //         .load('cage.glb', gltfReader);
+                // }
+                // function gltfReader(gltf) {
+                // let testModel = null;
+                // testModel = gltf.scene;
+                // if (testModel != null) {
+                //     console.log("Model loaded:  " + testModel);
+                //     // reticle.matrix.decompose(gltf.scene.position, gltf.scene.quaternion, gltf.scene.scale);
+                //     // gltf.scene.translateX(-0.55);
 
-                        // Décomposer la matrice de reticle pour obtenir la position et l'orientation
-                        const position = new THREE.Vector3();
-                        const quaternion = new THREE.Quaternion();
-                        reticle.matrix.decompose(position, quaternion, new THREE.Vector3());
-                        // const origine = reticle.matrix;
+                //     // Décomposer la matrice de reticle pour obtenir la position et l'orientation
+                //     const position = new THREE.Vector3();
+                //     const quaternion = new THREE.Quaternion();
+                //     reticle.matrix.decompose(position, quaternion, new THREE.Vector3());
+                //     // const origine = reticle.matrix;
 
-                        // Appliquer la position et l'orientation à la cage
-                        gltf.scene.position.copy(position);
-                        gltf.scene.quaternion.copy(quaternion);
+                //     // Appliquer la position et l'orientation à la cage
+                //     gltf.scene.position.copy(position);
+                //     gltf.scene.quaternion.copy(quaternion);
 
-                        gltf.scene.translateX(-0.55);
-                        const axesHelper = new THREE.AxesHelper(5);
-                        // testModel.add( axesHelper );
+                //     gltf.scene.translateX(-0.55);
+                //     const axesHelper = new THREE.AxesHelper(5);
+                //     // testModel.add( axesHelper );
 
-                        scene.add(gltf.scene);
-
-
-                        const floorShape = new CANNON.Box(new CANNON.Vec3(500, 500, 1))
-                        const floorBody = new CANNON.Body({ mass: 0 })
-                        floorBody.addShape(floorShape)
-                        floorBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0)
-                        world.addBody(floorBody)
-                        floorBody.position.set(0, -2.5, 0)
-
-                        // Créer des boîtes Cannon à l'emplacement de la cage
-                        const boxShape = new CANNON.Box(new CANNON.Vec3(0.1, 1.3, 0.1));
-                        const boxBody = new CANNON.Body({ mass: 0 });
-                        boxBody.addShape(boxShape);
-                        boxBody.position.copy(position);
-                        boxBody.quaternion.copy(quaternion);
-
-                        boxBody.position.y += 1.2;
-                        boxBody.position.x += -0.5;
-                        world.addBody(boxBody);
-                        world.scene.add(axesHelper);
+                //     scene.add(gltf.scene);
 
 
-                        const boxShape2 = new CANNON.Box(new CANNON.Vec3(0.1, 1.3, 0.1));
-                        const boxBody2 = new CANNON.Body({ mass: 0 });
-                        boxBody2.addShape(boxShape2);
-                        boxBody2.position.copy(position);
-                        boxBody2.quaternion.copy(quaternion);
+                //     const floorShape = new CANNON.Box(new CANNON.Vec3(500, 500, 1))
+                //     const floorBody = new CANNON.Body({ mass: 0 })
+                //     floorBody.addShape(floorShape)
+                //     floorBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0)
+                //     world.addBody(floorBody)
+                //     floorBody.position.set(0, -2.5, 0)
 
-                        // boxBody2.position.y += 1.2;
-                        // boxBody2.position.x += 0.5;
-                        world.addBody(boxBody2);
+                //     // Créer des boîtes Cannon à l'emplacement de la cage
+                //     const boxShape = new CANNON.Box(new CANNON.Vec3(0.1, 1.3, 0.1));
+                //     const boxBody = new CANNON.Body({ mass: 0 });
+                //     boxBody.addShape(boxShape);
+                //     boxBody.position.copy(position);
+                //     boxBody.quaternion.copy(quaternion);
 
-                        const boxShape3 = new CANNON.Box(new CANNON.Vec3(0.5, 0.1, 0.1));
-                        const boxBody3 = new CANNON.Body({ mass: 0 });
-                        boxBody3.addShape(boxShape3);
-                        boxBody3.position.copy(position);
-                        boxBody3.position.y += 0.885;
-                        boxBody3.quaternion.copy(quaternion);
-                        world.addBody(boxBody3);
-
-
-
+                //     boxBody.position.y += 1.2;
+                //     boxBody.position.x += -0.5;
+                //     world.addBody(boxBody);
+                //     world.scene.add(axesHelper);
 
 
-                    } else {
-                        console.log("Load FAILED.  ");
-                    }
-                }
-                loadData();
+                //     const boxShape2 = new CANNON.Box(new CANNON.Vec3(0.1, 1.3, 0.1));
+                //     const boxBody2 = new CANNON.Body({ mass: 0 });
+                //     boxBody2.addShape(boxShape2);
+                //     boxBody2.position.copy(position);
+                //     boxBody2.quaternion.copy(quaternion);
+
+                //     // boxBody2.position.y += 1.2;
+                //     // boxBody2.position.x += 0.5;
+                //     world.addBody(boxBody2);
+
+                //     const boxShape3 = new CANNON.Box(new CANNON.Vec3(0.5, 0.1, 0.1));
+                //     const boxBody3 = new CANNON.Body({ mass: 0 });
+                //     boxBody3.addShape(boxShape3);
+                //     boxBody3.position.copy(position);
+                //     boxBody3.position.y += 0.885;
+                //     boxBody3.quaternion.copy(quaternion);
+                //     world.addBody(boxBody3);
+
+                // } else {
+                //     console.log("Load FAILED.  ");
+                // }
+                // }
+                // loadData();
+
+                // Sol
+                const floorShape = new CANNON.Box(new CANNON.Vec3(500, 500, 1))
+                const floorBody = new CANNON.Body({ mass: 0 })
+                floorBody.addShape(floorShape)
+                floorBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0)
+                world.addBody(floorBody)
+                floorBody.position.set(0, -2.5, 0)
+
+                let box = new BoxShape(0.2, 2.5, 0.2)
+                shapes.push(box)
+
+                let box2 = new BoxShape(0.2, 2.5, 0.2)
+                shapes.push(box2)
+
+
+                let box3 = new BoxShape(1, 0.2, 0.2)
+                shapes.push(box3)
+
+                const position = new THREE.Vector3();
+                const quaternion = new THREE.Quaternion();
+                reticle.matrix.decompose(position, quaternion, new THREE.Vector3());
+
+                box.setPosition(position.x - 0.6, position.y + 1.3, position.z);
+                box.setQuaternion(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
+
+                box2.setPosition(position.x + 0.6, position.y + 1.3, position.z);
+                box2.setQuaternion(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
+
+                box3.setPosition(position.x, position.y + 0.885, position.z);
+                box3.setQuaternion(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
+
                 pose_count += 1;
             } else if (pose_count == 1) {
                 console.log("balle");
@@ -219,11 +248,15 @@ function render(timestamp, frame) {
         meshes[i].quaternion.copy(bodies[i].quaternion)
     }
 
+    for (let i = 0; i !== shapes.length; i++) {
+        shapes[i].update();
+
+    }
+
     cannonDebugger.update();
     renderer.render(scene, camera);
 }
 
-/*
 //TODO: define world, scene globally
 class BoxShape {
 
@@ -235,51 +268,45 @@ class BoxShape {
         // Physics
         const halfExtents = new CANNON.Vec3(w * 0.5, h * 0.5, d * 0.5);
         const shape = new CANNON.Box(halfExtents);
-        this.body = new CANNON.Body({ mass });
-        body.addShape(shape);
+        this.body = new CANNON.Body({ mass: 0 });
+        this.body.addShape(shape);
 
-        world.addBody(body);
+        world.addBody(this.body);
         //bodies.push(body);
 
 
         // Graphics
         const geometry = new THREE.BoxGeometry(w, h, d);
+        const material = new THREE.MeshPhongMaterial({ color: 0xffffff });
         this.mesh = new THREE.Mesh(geometry, material);
         // position and quaternion of the mesh are set by updateMeshPositions...
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
+        this.mesh.castShadow = true;
+        this.mesh.receiveShadow = true;
 
-        scene.add(mesh);
+        scene.add(this.mesh);
         //meshes.push(mesh);
 
     }
 
     update() {
-
         // copy Physics to Graphics
         this.mesh.position.copy(this.body.position);
         this.mesh.quaternion.copy(this.body.quaternion);
-
     }
 
     setPosition(x, y, z) {
         this.body.position.set(x, y, z);
-        update();
-
+        this.update();
     }
 
     setQuaternion(qx, qy, qz, qw) {
-
-
         this.body.quaternion.set(qx, qy, qz, qw);
-        update();
+        this.update();
     }
 
     setEuler(x_rad, y_rad, z_rad) {
-
-
         this.body.quaternion.setFromEuler(x, y, z);
-        update();
+        this.update();
     }
 
 };
@@ -290,17 +317,20 @@ class BoxShape {
 
 // init
 
-let box = new BoxShape(...)
-shapes.add(box)
+// let box = new BoxShape(...)
+// shapes.add(box)
 
 // loop
 
 // Sync the three.js meshes with the bodies
-for (let i = 0; i !== shapes.length; i++) {
-    shapes[i].update();
+// for (let i = 0; i !== shapes.length; i++) {
+//     shapes[i].update();
 
-}
+// }
 
-
-*/
+// const position = new THREE.Vector3();
+// const quaternion = new THREE.Quaternion();
+// reticle.matrix.decompose(position, quaternion, new THREE.Vector3());
+// shape.setPosition(position.x, position.y, position.z);
+// shape.setQuaternion(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
 

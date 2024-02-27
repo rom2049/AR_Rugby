@@ -38,8 +38,28 @@ function init() {
     function onSelect() {
         if (pose_count == 2) {
             console.log("oui");
+
+            camera.updateMatrixWorld();
+            let point1 = camera.position.clone();
+            let point2 = sphereMesh.position;
+
+            // Calcul du vecteur entre les deux points
+            const myVector = {
+                x: point2.x - point1.x,
+                y: point2.y - point1.y,
+                z: point2.z - point1.z
+            };
+
             sphereBody.velocity.y = 7;
-            sphereBody.velocity.z = -7;
+            // sphereBody.velocity.z = -7;
+            sphereBody.velocity.x = myVector.x;
+            sphereBody.velocity.z = myVector.z;
+
+
+            // camera.updateMatrixWorld();
+            // let vector = camera.position.clone();
+            // console.log(vector);
+            // console.log(sphereMesh.position);
         }
 
         if (reticle.visible) {
@@ -176,6 +196,8 @@ function init() {
                 bodies.push(sphereBody);
                 world.addBody(sphereBody);
 
+
+
                 pose_count += 1;
             }
         }
@@ -255,6 +277,11 @@ function render(timestamp, frame) {
 
     cannonDebugger.update();
     renderer.render(scene, camera);
+
+    // camera.updateMatrixWorld();
+    // let vector = camera.position.clone();
+    // // vector.applyMatrix(camera.matrixWorld);
+    // console.log(camera);
 }
 
 //TODO: define world, scene globally

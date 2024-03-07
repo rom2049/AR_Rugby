@@ -1,4 +1,6 @@
 # AR Rugby
+AR Rugby est une application de réalité augmentée. Le principe est de poser une cage de rugby à un endroit souhaité, puis de poser une balle à un autre endroit et enfin grâce à un troisième click, d'envoyer la balle dans les airs. Le but étant d'envoyer la balle entre les poteaux.
+
 ![Illustrastion](https://github.com/rom2049/AR_Rugby/blob/main/Capture%20d%E2%80%99%C3%A9cran_2024-03-07_08-31-16.png)
 
 ## Installation

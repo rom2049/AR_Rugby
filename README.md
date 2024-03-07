@@ -1,5 +1,5 @@
 # AR Rugby
-[Ilustrastion](https://github.com/rom2049/AR_Rugby/blob/main/Capture%20d%E2%80%99%C3%A9cran_2024-03-07_08-31-16.png)
+![Illustrastion](https://github.com/rom2049/AR_Rugby/blob/main/Capture%20d%E2%80%99%C3%A9cran_2024-03-07_08-31-16.png)
 
 ## Installation
 

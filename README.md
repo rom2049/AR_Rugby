@@ -8,4 +8,5 @@ Install [Node.js](https://nodejs.org)
 - `npm run dev` : launches a server and opens your browser in `https://localhost:5173` by default
 
 
-
+## Sources
+[three_vite](https://github.com/fdoganis/three_vite)
